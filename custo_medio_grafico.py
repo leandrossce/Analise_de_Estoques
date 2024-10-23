@@ -15,114 +15,165 @@ caminho_arquivo_vendas=''
 caminho_arquivo_relatorio_final=''
 
 def executar():
-     # 1. Ler os arquivos Excel
-    compras = pd.read_excel(caminho_arquivo_compras)
-    vendas = pd.read_excel(caminho_arquivo_vendas)
 
-    # 2. Converter colunas de data
-    compras['data'] = pd.to_datetime(compras['data_da_compra'])
-    vendas['data'] = pd.to_datetime(vendas['data_da_venda'])
+	# 1. Ler os arquivos Excel
+	compras = pd.read_excel(caminho_arquivo_compras)
+	vendas = pd.read_excel(caminho_arquivo_vendas)
 
-    # 3. Renomear colunas para padronização
-    compras.rename(columns={
-        'codigo_do_produto': 'codigo_produto',
-        'nome_do_produto': 'nome_produto',
-        'unidade_de_medida': 'unidade_medida',
-        'quantidade_comprada': 'quantidade',
-        'valor_unitario': 'valor_unitario',
-        'valor_total': 'valor_total'
-    }, inplace=True)
+	# 2. Converter colunas de data
+	compras['data'] = pd.to_datetime(compras['data_da_compra'])
+	vendas['data'] = pd.to_datetime(vendas['data_da_venda'])
 
-    vendas.rename(columns={
-        'codigo_do_produto': 'codigo_produto',
-        'nome_do_produto': 'nome_produto',
-        'unidade_de_medida': 'unidade_medida',
-        'quantidade_vendida': 'quantidade',
-        'valor_unitario': 'valor_unitario',
-        'valor_total': 'valor_total'
-    }, inplace=True)
+	# 3. Renomear colunas para padronização
+	compras.rename(columns={
+		'codigo_do_produto': 'codigo_produto',
+		'nome_do_produto': 'nome_produto',
+		'unidade_de_medida': 'unidade_medida',
+		'quantidade_comprada': 'quantidade',
+		'valor_unitario': 'valor_unitario',
+		'valor_total': 'valor_total'
+	}, inplace=True)
 
-    # 4. Adicionar coluna de tipo de movimento
-    compras['tipo'] = 'compra'
-    vendas['tipo'] = 'venda'
+	vendas.rename(columns={
+		'codigo_do_produto': 'codigo_produto',
+		'nome_do_produto': 'nome_produto',
+		'unidade_de_medida': 'unidade_medida',
+		'quantidade_vendida': 'quantidade',
+		'valor_unitario': 'valor_unitario',
+		'valor_total': 'valor_total'
+	}, inplace=True)
 
-    # 5. Tornar as quantidades de vendas negativas
-    vendas['quantidade'] = -vendas['quantidade']
+	# 4. Adicionar coluna de tipo de movimento
+	compras['tipo'] = 'compra'
+	vendas['tipo'] = 'venda'
 
-    # 6. Combinar os DataFrames
-    movimentos = pd.concat([compras, vendas], ignore_index=True)
+	# 5. Ajustar as quantidades das vendas para serem negativas
+	vendas['quantidade'] = -vendas['quantidade']
 
-    # 7. Ordenar por data
-    movimentos.sort_values(by='data', inplace=True)
+	# 6. Combinar os DataFrames
+	movimentos = pd.concat([compras, vendas], ignore_index=True)
 
-    # 8. Inicializar o controle de estoque
-    estoque = {}
-    cogs = []  # Lista para armazenar o custo dos produtos vendidos
+	# 7. Ordenar por data
+	movimentos.sort_values(by='data', inplace=True)
 
-    # 9. Percorrer os movimentos e calcular o custo médio
-    for _, row in movimentos.iterrows():
-        codigo = row['codigo_produto']
-        quantidade = row['quantidade']
-        valor_unitario = row['valor_unitario']
-        tipo = row['tipo']
-        data = row['data']
-        nome_produto = row['nome_produto']
-        unidade_medida = row['unidade_medida']
-        valor_total = row.get('valor_total', quantidade * valor_unitario)  # Caso valor_total não esteja presente
+	# 8. Inicializar o controle de estoque
+	estoque = {}
+	historico = []  # Lista para armazenar o histórico de movimentos com custo médio e estoque
 
-        if codigo not in estoque:
-            estoque[codigo] = {'quantidade': 0, 'custo_total': 0, 'custo_medio': 0}
-        
-        produto = estoque[codigo]
-        
-        if tipo == 'compra':
-            # Atualizar estoque e custo total
-            produto['quantidade'] += quantidade
-            produto['custo_total'] += quantidade * valor_unitario
-            
-            # Recalcular o custo médio
-            if produto['quantidade'] != 0:
-                produto['custo_medio'] = produto['custo_total'] / produto['quantidade']
-            else:
-                # Evitar divisão por zero
-                produto['custo_medio'] = 0
-        elif tipo == 'venda':
-            # Calcular custo médio atual
-            custo_medio = produto['custo_medio']
-            custo_venda = -quantidade * custo_medio
-            
-            # Calcular valor total da venda
-            valor_total_venda = -quantidade * valor_unitario  # quantidade é negativa
-            
-            # Atualizar estoque e custo total
-            produto['quantidade'] += quantidade  # quantidade é negativa
-            produto['custo_total'] += quantidade * custo_medio  # quantidade negativa
-            
-            # Registrar o custo dos produtos vendidos
-            cogs.append({
-                'data': data,
-                'codigo_produto': codigo,
-                'nome_produto': nome_produto,
-                'unidade_medida': unidade_medida,
-                'quantidade_vendida': -quantidade,
-                'valor_unitario_venda': valor_unitario,
-                'valor_total_venda': valor_total_venda,
-                'custo_medio': custo_medio,
-                'custo_venda': custo_venda,
-                'lucro_bruto': valor_total_venda - custo_venda
-            })
+	# 9. Percorrer os movimentos e calcular o custo médio
+	for _, row in movimentos.iterrows():
+		codigo = row['codigo_produto']
+		quantidade = row['quantidade']
+		valor_unitario = row['valor_unitario']
+		tipo = row['tipo']
+		data = row['data']
+		nome_produto = row['nome_produto']
+		unidade_medida = row['unidade_medida']
+		valor_total = row.get('valor_total', quantidade * valor_unitario)  # Caso valor_total não esteja presente
 
-    # 10. Converter a lista cogs em um DataFrame
-    cogs_df = pd.DataFrame(cogs)
+		if codigo not in estoque:
+			estoque[codigo] = {
+				'quantidade': 0,
+				'custo_total': 0,
+				'custo_medio': 0,
+				'nome_produto': nome_produto,
+				'unidade_medida': unidade_medida
+			}
 
-    # 11. Ordenar o resultado por data e código do produto
-    cogs_df.sort_values(by=['data', 'codigo_produto'], inplace=True)
+		produto = estoque[codigo]
 
-    # 12. Salvar o resultado em um arquivo Excel
-    cogs_df.to_excel(caminho_arquivo_relatorio_final, index=False)
+		if tipo == 'compra':
+			# Atualizar estoque e custo total
+			produto['quantidade'] += quantidade
+			produto['custo_total'] += quantidade * valor_unitario
 
-    print("Cálculo do custo médio concluído e resultado salvo em 'custo_medio_vendas.xlsx'.")
+			# Recalcular o custo médio
+			if produto['quantidade'] != 0:
+				produto['custo_medio'] = produto['custo_total'] / produto['quantidade']
+			else:
+				produto['custo_medio'] = 0
 
+			# Registrar o movimento
+			historico.append({
+				'data': data,
+				'codigo_produto': codigo,
+				'nome_produto': nome_produto,
+				'unidade_medida': unidade_medida,
+				'tipo': tipo,
+				'quantidade': quantidade,
+				'valor_unitario': valor_unitario,
+				'valor_total': valor_total,
+				'custo_medio': round(produto['custo_medio'], 2),
+				'quantidade_estoque': produto['quantidade'],
+				'custo_total_estoque': round(produto['custo_total'], 2),
+				'valor_unitario_venda': None,
+				'valor_total_venda': None,
+				'custo_venda': None,
+				'lucro_bruto': None
+			})
+		elif tipo == 'venda':
+			# Calcular custo médio atual
+			custo_medio = produto['custo_medio']
+			if produto['custo_medio']==0:		#ajuste do custo para vendas sem estoque inicial
+				produto['custo_medio']=0		# valores indicativos de estoque 0 -> necessário ver itens negativos
+				quantidade=0
+                
+				
+			custo_venda = -quantidade * custo_medio
+
+			# Calcular valor total da venda
+			valor_total_venda = -quantidade * valor_unitario  # quantidade é negativa
+
+			# Atualizar estoque e custo total
+			produto['quantidade'] += quantidade  # quantidade é negativa
+			produto['custo_total'] += quantidade * custo_medio  # quantidade negativa
+
+			# Registrar o movimento
+			historico.append({
+				'data': data,
+				'codigo_produto': codigo,
+				'nome_produto': nome_produto,
+				'unidade_medida': unidade_medida,
+				'tipo': tipo,
+				'quantidade': quantidade,  # Quantidade negativa
+				'valor_unitario': valor_unitario,
+				'valor_total': valor_total_venda,
+				'custo_medio': round(produto['custo_medio'], 2),
+				'quantidade_estoque': produto['quantidade'],
+				'custo_total_estoque': round(produto['custo_total'], 2),
+				'valor_unitario_venda': valor_unitario,
+				'valor_total_venda': round(valor_total_venda, 2),
+				'custo_venda': round(custo_venda, 2),
+				'lucro_bruto': round(valor_total_venda - custo_venda, 2)
+			})
+
+	# 10. Converter a lista historico em um DataFrame
+	historico_df = pd.DataFrame(historico)
+
+	# 11. Ordenar o resultado por data e código do produto
+	historico_df.sort_values(by=['data', 'codigo_produto'], inplace=True)
+
+	# 12. Criar o resumo dos itens que permaneceram em estoque
+	resumo_estoque = []
+
+	for codigo, info in estoque.items():
+		resumo_estoque.append({
+			'codigo_produto': codigo,
+			'nome_produto': info['nome_produto'],
+			'unidade_medida': info['unidade_medida'],
+			'quantidade_em_estoque': info['quantidade'],
+			'custo_medio': round(info['custo_medio'], 2),
+			'custo_total_estoque': round(info['custo_total'], 2)
+		})
+
+	resumo_estoque_df = pd.DataFrame(resumo_estoque)
+
+	# 13. Salvar o resultado em um arquivo Excel com duas abas
+	with pd.ExcelWriter(caminho_arquivo_relatorio_final) as writer:
+		historico_df.to_excel(writer, sheet_name='Historico_Movimentos', index=False)
+		resumo_estoque_df.to_excel(writer, sheet_name='Resumo_Estoque', index=False)
+
+	print("Processamento concluído e resultado salvo em 'historico_movimentos_custo_medio.xlsx'.")
 
 def selecionar_arquivo_compra():
     global caminho_arquivo_compras
