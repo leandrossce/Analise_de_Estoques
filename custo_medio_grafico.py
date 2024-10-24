@@ -1,3 +1,8 @@
+'''
+pip install pandas
+pip install Pillow
+
+'''
 import tkinter as tk
 from tkinter import filedialog
 
@@ -101,8 +106,8 @@ def executar():
 				'unidade_medida': unidade_medida,
 				'tipo': tipo,
 				'quantidade': quantidade,
-				'valor_unitario': valor_unitario,
-				'valor_total': valor_total,
+				'valor_unitario': round(valor_unitario,2),
+				'valor_total': round(valor_total,2),
 				'custo_medio': round(produto['custo_medio'], 2),
 				'quantidade_estoque': produto['quantidade'],
 				'custo_total_estoque': round(produto['custo_total'], 2),
@@ -111,13 +116,15 @@ def executar():
 				'custo_venda': None,
 				'lucro_bruto': None
 			})
+			
 		elif tipo == 'venda':
 			# Calcular custo médio atual
 			custo_medio = produto['custo_medio']
+			'''
 			if produto['custo_medio']==0:		#ajuste do custo para vendas sem estoque inicial
 				produto['custo_medio']=0		# valores indicativos de estoque 0 -> necessário ver itens negativos
 				quantidade=0
-                
+              '''  
 				
 			custo_venda = -quantidade * custo_medio
 
@@ -128,6 +135,9 @@ def executar():
 			produto['quantidade'] += quantidade  # quantidade é negativa
 			produto['custo_total'] += quantidade * custo_medio  # quantidade negativa
 
+			produto['quantidade'] += quantidade  # quantidade é negativa
+			produto['custo_total'] += quantidade * custo_medio  # quantidade negativa			
+
 			# Registrar o movimento
 			historico.append({
 				'data': data,
@@ -135,13 +145,13 @@ def executar():
 				'nome_produto': nome_produto,
 				'unidade_medida': unidade_medida,
 				'tipo': tipo,
-				'quantidade': quantidade,  # Quantidade negativa
-				'valor_unitario': valor_unitario,
-				'valor_total': valor_total_venda,
+				'quantidade': round(quantidade,2),  # Quantidade negativa
+				'valor_unitario': round(valor_unitario,2),
+				'valor_total': round(valor_total_venda,2),
 				'custo_medio': round(produto['custo_medio'], 2),
 				'quantidade_estoque': produto['quantidade'],
 				'custo_total_estoque': round(produto['custo_total'], 2),
-				'valor_unitario_venda': valor_unitario,
+				'valor_unitario_venda': round(valor_unitario,2),
 				'valor_total_venda': round(valor_total_venda, 2),
 				'custo_venda': round(custo_venda, 2),
 				'lucro_bruto': round(valor_total_venda - custo_venda, 2)
@@ -161,7 +171,7 @@ def executar():
 			'codigo_produto': codigo,
 			'nome_produto': info['nome_produto'],
 			'unidade_medida': info['unidade_medida'],
-			'quantidade_em_estoque': info['quantidade'],
+			'quantidade_em_estoque': round(info['quantidade'],2),
 			'custo_medio': round(info['custo_medio'], 2),
 			'custo_total_estoque': round(info['custo_total'], 2)
 		})
